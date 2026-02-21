@@ -1,17 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 const Navbar = ({ onNavigate }) => {
   const navigate = useNavigate();
   const go = onNavigate || navigate;
+  const [isDarkMode, setIsDarkMode] = useState(
+    () => localStorage.getItem("theme") === "dark",
+  );
+
+  useEffect(() => {
+    document.body.classList.toggle("dark-theme", isDarkMode);
+    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
 
   return (
     <header className="navbar">
-      <div className="nav-left">
-        <div className="logo-badge">SM</div>
+      <button className="nav-brand" type="button" onClick={() => go("/")}
+      >
+        {/* <div className="logo-badge">SM</div> */}
+        <img className="logo-image" src={logo} alt="SocraticMind Logo" />
         <span className="logo-text">SocraticMind</span>
-      </div>
+      </button>
       <div className="nav-right">
+        <button
+          className="nav-link nav-toggle"
+          type="button"
+          onClick={() => setIsDarkMode((prev) => !prev)}
+        >
+          {isDarkMode ? "Light" : "Dark"}
+        </button>
         <button
           className="nav-link"
           type="button"
