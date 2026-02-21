@@ -7,10 +7,15 @@ const Navbar = ({ onNavigate }) => {
 
   return (
     <header className="navbar">
-      <div className="nav-left">
+      <button
+        className="nav-left nav-logo-button"
+        type="button"
+        onClick={() => go("/")}
+        aria-label="Go to homepage"
+      >
         <div className="logo-badge">SM</div>
         <span className="logo-text">SocraticMind</span>
-      </div>
+      </button>
       <div className="nav-right">
         <button
           className="nav-link"
