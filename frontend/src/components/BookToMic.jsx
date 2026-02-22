@@ -15,13 +15,22 @@ export default function BookToMic() {
     let frameId;
     let bookGroup;
     let micGroup;
+    let removeResize = () => {};
 
     async function init() {
       try {
-        const THREE = await import(/* @vite-ignore */ "https://cdn.skypack.dev/three@0.161.0");
+        const THREE = await import(
+          /* @vite-ignore */ "https://unpkg.com/three@0.161.0/build/three.module.js"
+        );
 
-        const width = 520;
-        const height = 320;
+        const getSize = () => {
+          const parent = canvasRef.current?.parentElement;
+          if (!parent) return { width: 520, height: 320 };
+          const rect = parent.getBoundingClientRect();
+          return { width: rect.width || 520, height: rect.height || 320 };
+        };
+
+        const { width, height } = getSize();
 
         renderer = new THREE.WebGLRenderer({
           canvas: canvasRef.current,
@@ -30,6 +39,7 @@ export default function BookToMic() {
         });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+        renderer.setClearColor(0x000000, 0);
 
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
@@ -99,6 +109,15 @@ export default function BookToMic() {
         const starMat = new THREE.PointsMaterial({ color: 0xb9a5ff, size: 0.05 });
         scene.add(new THREE.Points(starGeo, starMat));
 
+        const onResize = () => {
+          const { width: w, height: h } = getSize();
+          renderer.setSize(w, h);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        };
+        window.addEventListener("resize", onResize);
+        removeResize = () => window.removeEventListener("resize", onResize);
+
         const animate = () => {
           frameId = requestAnimationFrame(animate);
           const t = performance.now() * 0.001;
@@ -123,6 +142,7 @@ export default function BookToMic() {
         };
 
         animate();
+
       } catch (err) {
         console.error("Three.js book-to-mic failed:", err);
       }
@@ -132,6 +152,7 @@ export default function BookToMic() {
 
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
+      removeResize();
       renderer?.dispose();
     };
   }, []);

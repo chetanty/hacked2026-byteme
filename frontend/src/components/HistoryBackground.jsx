@@ -15,7 +15,9 @@ export default function HistoryBackground() {
 
     async function init() {
       try {
-        const THREE = await import(/* @vite-ignore */ "https://cdn.skypack.dev/three@0.161.0");
+        const THREE = await import(
+          /* @vite-ignore */ "https://unpkg.com/three@0.161.0/build/three.module.js"
+        );
 
         const { innerWidth: width, innerHeight: height } = window;
 
