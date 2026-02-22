@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import BookToMic from "../components/BookToMic";
 import "../styles/home.css";
 
 const HomePage = () => {
@@ -11,8 +10,8 @@ const HomePage = () => {
     <div className="home-page">
       <Navbar onNavigate={navigate} />
       <main className="hero">
-        <div className="hero-visual">
-          <BookToMic />
+        <div className="hero-visual" aria-hidden="true">
+          <span className="hero-emoji" role="img" aria-label="Book">📚</span>
         </div>
         <h1 className="hero-title">
           Master your material,
