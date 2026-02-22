@@ -19,8 +19,8 @@ const Navbar = ({ onNavigate }) => {
       <button className="nav-brand" type="button" onClick={() => go("/")}
       >
         {/* <div className="logo-badge">SM</div> */}
-        <img className="logo-image" src={logo} alt="SocraticMind Logo" />
-        <span className="logo-text">SocraticMind</span>
+        <img className="logo-image" src={logo} alt="Cognify Logo" />
+        <span className="logo-text">Cognify</span>
       </button>
       <div className="nav-right">
         <button

@@ -8,6 +8,7 @@ function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/chat" element={<ChatPage />} />
+      <Route path="/chat/:sessionId" element={<ChatPage />} />
       <Route path="/history" element={<HistoryPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
