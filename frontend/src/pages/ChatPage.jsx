@@ -1,15 +1,20 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Navbar from "../components/Navbar";
 import HistoryBackground from "../components/HistoryBackground";
+import { createChat, getChat, getMessages, getUploads, addMessage, addUpload, updateChat } from "../db/indexedDb";
 import "../styles/chat.css";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
+const INITIAL_MESSAGE = { role: "assistant", text: "Hello! Upload your PDF and hit the microphone to talk to me." };
+
 export default function ChatPage() {
+    const { sessionId } = useParams();
+    
     // PDF & AI States
     const [pdfText, setPdfText] = useState("");
     const [uploadStatus, setUploadStatus] = useState("");
@@ -17,11 +22,11 @@ export default function ChatPage() {
     const [isGeneratingIndex, setIsGeneratingIndex] = useState(false);
     
     // Chat & Voice States
-    const [messages, setMessages] = useState([
-        { role: "assistant", text: "Hello! Upload your PDF and hit the microphone to talk to me." }
-    ]);
+    const [messages, setMessages] = useState([INITIAL_MESSAGE]);
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [chatId, setChatId] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
@@ -32,16 +37,69 @@ export default function ChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Initialize or load chat from DB
+    useEffect(() => {
+        let mounted = true;
+
+        async function init() {
+            try {
+            if (sessionId) {
+                const id = parseInt(sessionId, 10);
+                if (isNaN(id)) {
+                    setIsLoading(false);
+                    return;
+                }
+                const chat = await getChat(id);
+                if (!chat) {
+                    if (mounted) setIsLoading(false);
+                    return;
+                }
+                if (!mounted) return;
+                const [savedMessages, savedUploads] = await Promise.all([
+                    getMessages(id),
+                    getUploads(id),
+                ]);
+                if (!mounted) return;
+                setChatId(id);
+                const msgs = savedMessages.length > 0
+                    ? savedMessages.map((m) => ({ role: m.role, text: m.text }))
+                    : [INITIAL_MESSAGE];
+                setMessages(msgs);
+                // Use latest upload's content if any
+                if (savedUploads.length > 0) {
+                    const latest = savedUploads[savedUploads.length - 1];
+                    setPdfText(latest.pdfText || "");
+                    setChapters(latest.chapters || []);
+                    setUploadStatus(`✅ Loaded ${savedUploads.length} file(s). Latest: ${latest.fileName}`);
+                }
+            } else {
+                const id = await createChat();
+                if (!mounted) return;
+                await addMessage(id, "assistant", INITIAL_MESSAGE.text);
+                if (!mounted) return;
+                setChatId(id);
+                navigate(`/chat/${id}`, { replace: true });
+            }
+            setIsLoading(false);
+            } catch (err) {
+                console.error("Chat init error:", err);
+                if (mounted) setIsLoading(false);
+            }
+        }
+
+        init();
+        return () => { mounted = false; };
+    }, [sessionId, navigate]);
+
     // 1. Handle PDF Upload & Auto-Generate Index
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file || !chatId) return;
 
         setUploadStatus('Reading PDF...');
-        setChapters([]); // Reset chapters on new upload
+        setChapters([]);
         
         try {
-            // Read PDF
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             let fullText = '';
@@ -55,9 +113,14 @@ export default function ChatPage() {
             setPdfText(fullText);
             setUploadStatus(`✅ PDF loaded! Extracted ${fullText.length} characters.`);
             
-            // MAGIC HACKATHON FEATURE: Auto-generate the index
-            generateIndexWithAI(fullText);
+            const chapterArray = await generateIndexWithAI(fullText);
+            setChapters(chapterArray);
 
+            await addUpload(chatId, {
+                fileName: file.name,
+                pdfText: fullText,
+                chapters: chapterArray,
+            });
         } catch (error) {
             console.error(error);
             setUploadStatus('❌ Error reading PDF.');
@@ -80,15 +143,12 @@ export default function ChatPage() {
 
             const result = await model.generateContent(prompt);
             let rawText = await result.response.text();
-            
-            // Clean up any weird formatting the AI might add before parsing
             rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
             const chapterArray = JSON.parse(rawText);
-            
-            setChapters(chapterArray);
+            return chapterArray;
         } catch (error) {
             console.error("Failed to generate index:", error);
-            setChapters(["⚠️ Could not auto-generate index."]);
+            return ["⚠️ Could not auto-generate index."];
         } finally {
             setIsGeneratingIndex(false);
         }
@@ -126,7 +186,16 @@ export default function ChatPage() {
 
         recognition.onresult = async (event) => {
             const transcript = event.results[0][0].transcript;
-            setMessages((prev) => [...prev, { role: 'user', text: `🎤 ${transcript}` }]);
+            const userText = `🎤 ${transcript}`;
+            setMessages((prev) => [...prev, { role: 'user', text: userText }]);
+
+            if (chatId) {
+                addMessage(chatId, 'user', userText).catch(console.error);
+                if (messages.length === 1) {
+                    const title = transcript.replace(/^🎤\s*/, '').slice(0, 50) + (transcript.length > 50 ? '…' : '');
+                    updateChat(chatId, { title }).catch(console.error);
+                }
+            }
 
             try {
                 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -144,18 +213,38 @@ export default function ChatPage() {
 
                 const result = await model.generateContent(prompt);
                 const text = await result.response.text();
+                const assistantText = `🔊 ${text}`;
                 
-                setMessages((prev) => [...prev, { role: 'assistant', text: `🔊 ${text}` }]);
+                setMessages((prev) => [...prev, { role: 'assistant', text: assistantText }]);
+                if (chatId) addMessage(chatId, 'assistant', assistantText).catch(console.error);
                 speakResponse(text);
 
             } catch (error) {
                 console.error(error);
-                setMessages((prev) => [...prev, { role: 'assistant', text: 'Error connecting to the AI.' }]);
+                const errText = 'Error connecting to the AI.';
+                setMessages((prev) => [...prev, { role: 'assistant', text: errText }]);
+                if (chatId) addMessage(chatId, 'assistant', errText).catch(console.error);
             }
         };
 
         recognition.start();
     };
+
+    if (isLoading) {
+        return (
+            <div className="chat-shell">
+                <HistoryBackground />
+                <div className="chat-overlay" aria-hidden="true" />
+                <Navbar onNavigate={navigate} />
+                <div className="chat-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+                    <div className="chat-loader">
+                        <div className="spinner" />
+                        <p>Loading chat…</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="chat-shell">
