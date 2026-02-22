@@ -31,12 +31,18 @@ body:not(.dark-theme) {
   inset: 0;
   background: linear-gradient(180deg, rgba(11, 10, 20, 0.7) 0%, rgba(11, 10, 20, 0.25) 45%, rgba(11, 10, 20, 0.7) 100%);
   mix-blend-mode: screen;
+  pointer-events: none;
   z-index: 1;
 }
 
 body:not(.dark-theme) .chat-overlay {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(255, 255, 255, 0.9) 100%);
   mix-blend-mode: normal;
+}
+
+.chat-shell .navbar {
+  position: relative;
+  z-index: 3;
 }
 
 .chat-content {
