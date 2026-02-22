@@ -186,6 +186,85 @@ body:not(.dark-theme) .history-page .navbar {
   box-shadow: 0 14px 36px rgba(124, 58, 237, 0.42);
 }
 
+.history-saved-section {
+  margin-top: 24px;
+}
+
+.history-section-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.history-empty-msg {
+  margin: 0;
+  color: var(--history-muted);
+}
+
+.history-card-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.history-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.3);
+}
+
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.history-card-header h3 {
+  flex: 1;
+  word-break: break-word;
+}
+
+.history-delete {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.7;
+  border-radius: 8px;
+}
+
+.history-delete:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.history-card-meta {
+  font-size: 13px;
+  color: var(--history-muted);
+}
+
+.history-uploads {
+  margin-top: 4px;
+}
+
+.history-upload-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--history-muted);
+}
+
+.history-upload-list li {
+  margin: 2px 0;
+}
+
+.history-loader {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
 @media (max-width: 640px) {
   .history-content {
     padding: 32px 18px 72px;
