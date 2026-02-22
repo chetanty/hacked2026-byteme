@@ -16,7 +16,7 @@ const HistoryPage = () => {
       <main className="history-content">
         <section className="history-hero">
           <span className="history-kicker">Session Library</span>
-          <h1 className="history-title">Revisit your Socratic drills.</h1>
+          <h1 className="history-title">Revisit your Cognify drills.</h1>
           <p className="history-subtitle">
             Past quizzes and chapter check-ins will live here. Track how your readiness bar
             trends over time and replay questions to sharpen weak spots.
