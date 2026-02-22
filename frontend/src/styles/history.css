@@ -244,6 +244,10 @@ body:not(.dark-theme) .history-page .navbar {
   color: var(--history-muted);
 }
 
+.history-progress {
+  margin-top: 4px;
+}
+
 .history-uploads {
   margin-top: 4px;
 }

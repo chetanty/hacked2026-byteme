@@ -5,8 +5,10 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Navbar from "../components/Navbar";
 import HistoryBackground from "../components/HistoryBackground";
-import { createChat, getChat, getMessages, getUploads, addMessage, addUpload, updateChat } from "../db/indexedDb";
+import { createChat, getChat, getMessages, getUploads, addMessage, addUpload, updateChat, updateChatProgress } from "../db/indexedDb";
+import ProgressBar from "../components/ProgressBar";
 import "../styles/chat.css";
+import "../styles/progress.css";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -27,6 +29,7 @@ export default function ChatPage() {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [chatId, setChatId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [progress, setProgress] = useState({ correctCount: 0, totalEvaluated: 0 });
     
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
@@ -61,6 +64,10 @@ export default function ChatPage() {
                 ]);
                 if (!mounted) return;
                 setChatId(id);
+                setProgress({
+                    correctCount: chat.correctCount ?? 0,
+                    totalEvaluated: chat.totalEvaluated ?? 0,
+                });
                 const msgs = savedMessages.length > 0
                     ? savedMessages.map((m) => ({ role: m.role, text: m.text }))
                     : [INITIAL_MESSAGE];
@@ -199,20 +206,51 @@ export default function ChatPage() {
 
             try {
                 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-                const prompt = `
-                You are an interactive AI study tutor on a voice call with a student. 
-                Keep your answers conversational, concise, and easy to listen to. 
-                Do NOT use markdown formatting like asterisks, bold text, or bullet points because this will be read aloud by a text-to-speech engine.
-                
-                --- PDF MATERIAL ---
-                ${pdfText || "No PDF uploaded yet. Just chat normally."}
-                --------------------
+                const recentContext = [...messages, { role: 'user', text: userText }]
+                    .slice(-6)
+                    .map((m) => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${(m.text || '').replace(/^[🎤🔊]\s*/, '')}`)
+                    .join('\n');
 
-                Student says: ${transcript}
-                `;
+                const prompt = `
+You are an interactive AI study tutor on a voice call with a student.
+Keep your answers conversational, concise, and easy to listen to.
+Do NOT use markdown formatting like asterisks, bold text, or bullet points because this will be read aloud by a text-to-speech engine.
+
+IMPORTANT - Answer evaluation:
+When the student is answering a comprehension or quiz question YOU asked (based on the PDF), evaluate their answer.
+- If their answer is correct or mostly correct: append exactly [EVAL:correct] at the very end of your response (no other text after it).
+- If their answer is wrong or incomplete: append exactly [EVAL:incorrect] at the very end of your response.
+- If you are NOT evaluating an answer (e.g. they asked a question, made a comment, or you're asking a new question), do NOT append any [EVAL:...].
+When you have PDF material, occasionally ask comprehension questions to quiz the student. When they answer, evaluate and use [EVAL:correct] or [EVAL:incorrect].
+
+--- PDF MATERIAL ---
+${pdfText || "No PDF uploaded yet. Just chat normally."}
+--------------------
+
+--- RECENT CONVERSATION ---
+${recentContext}
+--------------------
+
+Student says: ${transcript}
+`;
 
                 const result = await model.generateContent(prompt);
-                const text = await result.response.text();
+                let text = await result.response.text();
+
+                // Parse evaluation marker and update progress
+                const evalCorrect = text.includes('[EVAL:correct]');
+                const evalIncorrect = text.includes('[EVAL:incorrect]');
+                if (evalCorrect || evalIncorrect) {
+                    text = text.replace(/\s*\[EVAL:(?:correct|incorrect)\]\s*$/i, '').trim();
+                    setProgress((p) => ({
+                        correctCount: p.correctCount + (evalCorrect ? 1 : 0),
+                        totalEvaluated: p.totalEvaluated + 1,
+                    }));
+                    if (chatId) {
+                        updateChatProgress(chatId, { correct: evalCorrect }).catch(console.error);
+                    }
+                }
+
                 const assistantText = `🔊 ${text}`;
                 
                 setMessages((prev) => [...prev, { role: 'assistant', text: assistantText }]);
@@ -272,6 +310,12 @@ export default function ChatPage() {
                             <span role="img" aria-label="Index">📑</span>
                             Study Index
                         </div>
+                        {pdfText && (
+                            <div className="chat-progress-wrap">
+                                <span className="chat-progress-title">Chapter mastery</span>
+                                <ProgressBar correctCount={progress.correctCount} totalEvaluated={progress.totalEvaluated} />
+                            </div>
+                        )}
                         <div className="chat-index-body">
                             {!pdfText && !isGeneratingIndex && (
                                 <p className="muted">Upload a PDF to generate the syllabus.</p>

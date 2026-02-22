@@ -139,6 +139,22 @@ body:not(.dark-theme) .chat-overlay {
   letter-spacing: 0.01em;
 }
 
+.chat-progress-wrap {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--chat-border);
+  margin-bottom: 4px;
+}
+
+.chat-progress-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--chat-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .chat-index-body {
   max-height: 520px;
   overflow-y: auto;

@@ -13,6 +13,8 @@ export async function createChat() {
     title: "New Chat",
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    correctCount: 0,
+    totalEvaluated: 0,
   });
 }
 
@@ -69,6 +71,18 @@ export async function addUpload(chatId, { fileName, pdfText, chapters }) {
 
 export async function getUploads(chatId) {
   return db.uploads.where("chatId").equals(chatId).sortBy("uploadedAt");
+}
+
+export async function updateChatProgress(chatId, { correct }) {
+  const chat = await db.chats.get(chatId);
+  if (!chat) return;
+  const correctCount = (chat.correctCount ?? 0) + (correct ? 1 : 0);
+  const totalEvaluated = (chat.totalEvaluated ?? 0) + 1;
+  await db.chats.update(chatId, {
+    correctCount,
+    totalEvaluated,
+    updatedAt: Date.now(),
+  });
 }
 
 export async function deleteChat(id) {

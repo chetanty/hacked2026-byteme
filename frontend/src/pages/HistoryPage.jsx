@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import ProgressBar from "../components/ProgressBar";
 import HistoryBackground from "../components/HistoryBackground";
 import { getChatsWithCounts, getUploads, deleteChat } from "../db/indexedDb";
 import "../styles/home.css";
 import "../styles/history.css";
 import "../styles/chat.css";
+import "../styles/progress.css";
 
 const formatDate = (ts) => {
   const d = new Date(ts);
@@ -141,6 +143,15 @@ const HistoryPage = () => {
                             <li key={u.id}>{u.fileName}</li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+                    {uploads.length > 0 && (
+                      <div className="history-progress">
+                        <ProgressBar
+                          correctCount={chat.correctCount ?? 0}
+                          totalEvaluated={chat.totalEvaluated ?? 0}
+                          variant="compact"
+                        />
                       </div>
                     )}
                     <div className="history-tags">
