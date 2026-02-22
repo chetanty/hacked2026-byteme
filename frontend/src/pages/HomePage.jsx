@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import BookToMic from "../components/BookToMic";
 import "../styles/home.css";
 
 const HomePage = () => {
@@ -10,6 +11,9 @@ const HomePage = () => {
     <div className="home-page">
       <Navbar onNavigate={navigate} />
       <main className="hero">
+        <div className="hero-visual">
+          <BookToMic />
+        </div>
         <h1 className="hero-title">
           Master your material,
           <br />
@@ -26,6 +30,16 @@ const HomePage = () => {
         >
           Chat with Agent
         </button>
+
+        <section className="mission">
+          <div className="mission-line" />
+          <p className="mission-subtitle">Our mission</p>
+          <p className="mission-text">
+            Students with dyslexia or ADHD shouldn’t have to wrestle with dense PDFs alone. Cognify lets you
+            talk through the material, listen to questions, and build retention through guided, voice-first
+            quizzing—turning static pages into active recall.
+          </p>
+        </section>
       </main>
     </div>
   );
